@@ -48,7 +48,7 @@ def main():
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8443)),
         url_path=TELEGRAM_TOKEN,
-        webhook_url=f"https://your-render-app-name.onrender.com/{TELEGRAM_TOKEN}"
+        webhook_url=f"https://veronika.onrender.com/{TELEGRAM_TOKEN}"
     )
 
 if __name__ == "__main__":
