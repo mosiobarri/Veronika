@@ -10,10 +10,13 @@ load_dotenv()
 # تنظیم توکن‌ها و Assistant ID
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ASSISTANT_ID = os.getenv("ASSISTANT_ID")  # اضافه کردن Assistant ID
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")
 
-# تنظیم کلاینت OpenAI
-client = OpenAI(api_key=OPENAI_API_KEY)
+# تنظیم کلاینت OpenAI با هدر Assistants v2
+client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    default_headers={"OpenAI-Beta": "assistants=v2"}
+)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("سلام! من بات شما با Assistant اختصاصی هستم. یه پیام بفرست!")
@@ -22,7 +25,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
 
     try:
-        # ایجاد یه Thread برای مکالمه
+        # ایجاد Thread برای مکالمه
         thread = client.beta.threads.create()
 
         # افزودن پیام کاربر به Thread
