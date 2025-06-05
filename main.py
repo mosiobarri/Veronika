@@ -7,32 +7,49 @@ from dotenv import load_dotenv
 # بارگذاری متغیرهای محیطی
 load_dotenv()
 
-# تنظیم توکن‌های API
+# تنظیم توکن‌ها و Assistant ID
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")  # اضافه کردن Assistant ID
 
 # تنظیم کلاینت OpenAI
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("سلام! من بات شما هستم که با OpenAI Assistant کار می‌کنم. یه پیام بفرست تا بتونم باهات گپ بزنم!")
+    await update.message.reply_text("سلام! من بات شما با Assistant اختصاصی هستم. یه پیام بفرست!")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
 
-    # ارسال پیام به OpenAI Assistant
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",  # مدل Assistant (مثل gpt-4o یا gpt-3.5-turbo)
-            messages=[
-                {"role": "user", "content": user_message}
-            ]
-        )
-        assistant_reply = response.choices[0].message.content
-    except Exception as e:
-        assistant_reply = f"خطا در ارتباط با OpenAI: {str(e)}"
+        # ایجاد یه Thread برای مکالمه
+        thread = client.beta.threads.create()
 
-    # ارسال پاسخ به کاربر در تلگرام
+        # افزودن پیام کاربر به Thread
+        client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=user_message
+        )
+
+        # اجرای Assistant در Thread
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=ASSISTANT_ID
+        )
+
+        # انتظار برای تکمیل پاسخ
+        while run.status != "completed":
+            run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+        # دریافت پاسخ Assistant
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        assistant_reply = messages.data[0].content[0].text.value
+
+    except Exception as e:
+        assistant_reply = f"خطا در ارتباط با Assistant: {str(e)}"
+
+    # ارسال پاسخ به کاربر
     await update.message.reply_text(assistant_reply)
 
 def main():
@@ -43,7 +60,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # شروع بات با Webhook
+    # شروع Webhook
     app.run_webhook(
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8443)),
